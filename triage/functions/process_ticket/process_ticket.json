@@ -1,0 +1,20 @@
+{
+  "name": "process_ticket",
+  "description": "Reads a pending ticket, calls extraction-agent to extract structured signals, and writes them back to the signals table",
+  "code": { "$file": "code.py" },
+  "visibility": "POD",
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "tickets",
+        "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "signals",
+        "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"]
+      }
+    ]
+  }
+}

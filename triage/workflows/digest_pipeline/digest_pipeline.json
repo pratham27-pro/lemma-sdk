@@ -1,0 +1,29 @@
+{
+  "name": "digest_pipeline",
+  "description": "Runs generate_digest to produce a Product Intelligence Report from all current signals and clusters",
+  "visibility": "POD",
+  "graph": {
+    "nodes": [
+      {
+        "id": "start",
+        "type": "START",
+        "label": "Trigger"
+      },
+      {
+        "id": "generate",
+        "type": "FUNCTION",
+        "label": "Generate Digest",
+        "function_name": "generate_digest"
+      },
+      {
+        "id": "end",
+        "type": "END",
+        "label": "Done"
+      }
+    ],
+    "edges": [
+      { "from": "start",    "to": "generate" },
+      { "from": "generate", "to": "end" }
+    ]
+  }
+}

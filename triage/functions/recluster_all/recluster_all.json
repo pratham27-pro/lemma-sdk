@@ -1,0 +1,20 @@
+{
+  "name": "recluster_all",
+  "description": "Reads all signals, calls clustering-agent to group them into themes, then rewrites the clusters table and updates each signal's cluster_id",
+  "code": { "$file": "code.py" },
+  "visibility": "POD",
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "signals",
+        "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "clusters",
+        "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"]
+      }
+    ]
+  }
+}

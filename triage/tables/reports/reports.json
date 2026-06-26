@@ -1,0 +1,14 @@
+{
+  "name": "reports",
+  "primary_key_column": "id",
+  "enable_rls": false,
+  "visibility": "POD",
+  "columns": [
+    { "name": "title",         "type": "TEXT",    "required": true },
+    { "name": "content",       "type": "TEXT",    "required": true },
+    { "name": "signal_count",  "type": "INTEGER", "default": 0 },
+    { "name": "cluster_count", "type": "INTEGER", "default": 0 },
+    { "name": "week_start",    "type": "DATE" }
+  ],
+  "config": {}
+}

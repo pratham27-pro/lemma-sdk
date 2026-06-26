@@ -1,0 +1,16 @@
+{
+  "name": "signals",
+  "primary_key_column": "id",
+  "enable_rls": false,
+  "visibility": "POD",
+  "columns": [
+    { "name": "ticket_id",    "type": "TEXT",    "required": true },
+    { "name": "type",         "type": "TEXT",    "required": true },
+    { "name": "severity",     "type": "TEXT",    "required": true },
+    { "name": "feature_area", "type": "TEXT",    "required": true },
+    { "name": "quote",        "type": "TEXT",    "required": true },
+    { "name": "summary",      "type": "TEXT",    "required": true },
+    { "name": "cluster_id",   "type": "TEXT" }
+  ],
+  "config": {}
+}

@@ -1,0 +1,17 @@
+{
+  "name": "clusters",
+  "primary_key_column": "id",
+  "enable_rls": false,
+  "visibility": "POD",
+  "columns": [
+    { "name": "theme",        "type": "TEXT",    "required": true },
+    { "name": "description",  "type": "TEXT" },
+    { "name": "signal_count", "type": "INTEGER", "default": 0 },
+    { "name": "top_quote",    "type": "TEXT" },
+    { "name": "p0_count",     "type": "INTEGER", "default": 0 },
+    { "name": "p1_count",     "type": "INTEGER", "default": 0 },
+    { "name": "p2_count",     "type": "INTEGER", "default": 0 },
+    { "name": "p3_count",     "type": "INTEGER", "default": 0 }
+  ],
+  "config": {}
+}

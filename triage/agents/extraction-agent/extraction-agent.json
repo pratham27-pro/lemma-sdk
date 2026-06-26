@@ -1,0 +1,16 @@
+{
+  "name": "extraction-agent",
+  "description": "Given a raw support ticket, extracts every distinct product signal as a structured JSON array",
+  "instruction": { "$file": "instruction.md" },
+  "toolsets": ["POD"],
+  "visibility": "POD",
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "tickets",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      }
+    ]
+  }
+}

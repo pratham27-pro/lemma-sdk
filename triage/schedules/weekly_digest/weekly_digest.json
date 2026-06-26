@@ -1,0 +1,10 @@
+{
+  "name": "weekly_digest",
+  "schedule_type": "TIME",
+  "workflow_name": "digest_pipeline",
+  "visibility": "POD",
+  "config": {
+    "cron": "0 9 * * 1",
+    "timezone": "UTC"
+  }
+}

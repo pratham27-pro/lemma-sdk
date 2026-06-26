@@ -1,0 +1,14 @@
+{
+  "name": "tickets",
+  "primary_key_column": "id",
+  "enable_rls": false,
+  "visibility": "POD",
+  "columns": [
+    { "name": "raw_text",     "type": "TEXT",    "required": true },
+    { "name": "source",       "type": "TEXT",    "required": true },
+    { "name": "filename",     "type": "TEXT" },
+    { "name": "status",       "type": "TEXT",    "required": true, "default": "pending" },
+    { "name": "signal_count", "type": "INTEGER", "default": 0 }
+  ],
+  "config": {}
+}
