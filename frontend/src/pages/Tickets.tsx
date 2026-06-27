@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Inbox, Mail, MessageSquare, FileText, MessageCircle, Upload, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Inbox, Mail, MessageSquare, FileText, MessageCircle, Upload, CheckCircle, Loader2, AlertCircle, SendHorizonal } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
 import { Button } from '../components/ui/Button';
 import { SkeletonRow } from '../components/ui/Skeleton';
@@ -23,11 +23,12 @@ const SOURCE_LABEL: Record<TicketSource, string> = {
 
 function StatusChip({ status }: { status: Ticket['status'] }) {
   const cfg = {
-    done:       { icon: CheckCircle, cls: 'text-emerald-600 bg-emerald-50', label: 'Done' },
-    processing: { icon: Loader2, cls: 'text-accent-600 bg-accent-50 animate-spin', label: 'Processing' },
-    pending:    { icon: Loader2, cls: 'text-amber-600 bg-amber-50 animate-pulse-soft', label: 'Pending' },
-    failed:     { icon: AlertCircle, cls: 'text-red-600 bg-red-50', label: 'Failed' },
-  }[status];
+    done:       { icon: CheckCircle,    cls: 'text-emerald-600 bg-emerald-50', label: 'Done' },
+    replied:    { icon: SendHorizonal,  cls: 'text-blue-600 bg-blue-50',       label: 'Replied' },
+    processing: { icon: Loader2,        cls: 'text-accent-600 bg-accent-50',   label: 'Processing' },
+    pending:    { icon: Loader2,        cls: 'text-amber-600 bg-amber-50',     label: 'Pending' },
+    failed:     { icon: AlertCircle,    cls: 'text-red-600 bg-red-50',         label: 'Failed' },
+  }[status] ?? { icon: AlertCircle, cls: 'text-slate-500 bg-slate-100', label: status };
   const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${cfg.cls.replace(/animate-\S+/, '')}`}>
@@ -55,9 +56,10 @@ export function Tickets() {
   const filtered = filter === 'all' ? tickets : tickets.filter((t) => t.status === filter);
   const counts = {
     all: tickets.length,
-    pending: tickets.filter((t) => t.status === 'pending').length,
-    processing: tickets.filter((t) => t.status === 'processing').length,
+    replied: tickets.filter((t) => t.status === 'replied').length,
     done: tickets.filter((t) => t.status === 'done').length,
+    processing: tickets.filter((t) => t.status === 'processing').length,
+    pending: tickets.filter((t) => t.status === 'pending').length,
     failed: tickets.filter((t) => t.status === 'failed').length,
   };
 
@@ -77,7 +79,7 @@ export function Tickets() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
           {/* Filter tabs */}
           <div className="flex items-center gap-1 px-4 py-3 border-b border-slate-100 overflow-x-auto no-scrollbar">
-            {(['all', 'processing', 'pending', 'done', 'failed'] as const).map((f) => (
+            {(['all', 'replied', 'done', 'processing', 'pending', 'failed'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}

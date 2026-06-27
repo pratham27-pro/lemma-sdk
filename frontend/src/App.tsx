@@ -10,6 +10,7 @@ import { Themes } from './pages/Themes';
 import { AllSignals } from './pages/AllSignals';
 import { Docs } from './pages/Docs';
 import { Reports } from './pages/Reports';
+import { Submit } from './pages/Submit';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,8 +23,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          {/* Landing page — no sidebar */}
+          {/* Public pages — no sidebar */}
           <Route path="/" element={<Landing />} />
+          <Route path="/submit" element={<Submit />} />
 
           {/* App — with sidebar layout */}
           <Route path="/app" element={<Layout />}>

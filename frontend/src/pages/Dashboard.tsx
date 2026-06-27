@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, AlertCircle, Layers, Bug, Clock, ArrowRight, Plus, Inbox, X,
+  Zap, AlertCircle, Layers, Clock, ArrowRight, Plus, Inbox, X,
 } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
 import { StatCard } from '../components/ui/Card';

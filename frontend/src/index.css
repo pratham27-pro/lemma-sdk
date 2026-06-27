@@ -84,3 +84,167 @@
     scrollbar-width: none;
   }
 }
+
+/* ── Landing page layout (responsive) ────────────── */
+.lp-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: clamp(20px, 4vw, 60px);
+  padding-right: clamp(20px, 4vw, 60px);
+}
+
+.lp-hero-grid {
+  display: grid;
+  grid-template-columns: 1fr minmax(300px, 420px);
+  gap: clamp(28px, 3.5vw, 64px);
+  align-items: start;
+  padding-top: clamp(40px, 5.5vw, 72px);
+  padding-bottom: clamp(48px, 6vw, 80px);
+}
+
+.lp-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 3vw, 40px);
+  align-items: end;
+}
+
+.lp-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  overflow: hidden;
+}
+
+.lp-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.lp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  overflow: hidden;
+}
+
+.lp-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.lp-cap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* ≤1280px: tighten the hero card */
+@media (max-width: 1280px) {
+  .lp-hero-grid {
+    grid-template-columns: 1fr minmax(280px, 360px);
+  }
+}
+
+/* ≤1100px: collapse steps & stats to 2-col, hide hero card column */
+@media (max-width: 1100px) {
+  .lp-hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-hero-card {
+    display: none;
+  }
+  .lp-steps-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ≤1024px: features single col looks better */
+@media (max-width: 1024px) {
+  .lp-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lp-two-col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .lp-split-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* ── Landing page animations ──────────────────────── */
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes lp-glow-pulse {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(1.06); }
+}
+
+@keyframes lp-shimmer-row {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes lp-border-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,160,32,0); }
+  50%       { box-shadow: 0 0 24px 2px rgba(245,160,32,0.15); }
+}
+
+.lp-float {
+  animation: lp-float 5s ease-in-out infinite;
+}
+
+.lp-glow {
+  animation: lp-border-glow 3s ease-in-out infinite;
+}
+
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lp-reveal.lp-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lp-reveal-scale {
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lp-reveal-scale.lp-in {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lp-card-lift {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.lp-card-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+}
