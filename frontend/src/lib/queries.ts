@@ -26,11 +26,97 @@ export async function createTicket(raw_text: string, source: TicketSource, filen
     raw_text,
     source,
     filename: filename ?? null,
-    status: 'pending',
+    status: 'processing',
     signal_count: 0,
   });
-  await client.functions.run(FUNCTION.PROCESS_TICKET, { input: { ticket_id: ticket.id } });
+
+  // Call extraction agent directly from the browser — no Python function needed
+  extractSignals(client, ticket.id as string, raw_text).catch(() => {
+    client.records.update(TABLE.TICKETS, ticket.id as string, { status: 'failed' });
+  });
+
   return ticket as Ticket;
+}
+
+async function extractSignals(client: ReturnType<typeof getClient>, ticketId: string, rawText: string) {
+  const message =
+    'Extract all product signals from this support ticket. ' +
+    'Return a JSON array only — no prose.\n\n' +
+    `Ticket:\n${rawText}`;
+
+  const conv = await client.agents.run(AGENT.EXTRACTION, message) as { id: string };
+
+  // Poll for assistant reply (max 90s)
+  const start = Date.now();
+  let lastSeq: number | undefined;
+  let replyText = '';
+
+  while (Date.now() - start < 90_000) {
+    await new Promise((r) => setTimeout(r, 2500));
+    const msgs = await client.conversations.messages.list(conv.id, {
+      limit: 20,
+      ...(lastSeq !== undefined ? { after_sequence: lastSeq } : {}),
+    }) as { items?: { role: string; kind: string; text?: string; sequence?: number }[] };
+    const msgItems = msgs.items ?? [];
+    if (msgItems.length) lastSeq = Math.max(...msgItems.map((m) => m.sequence ?? 0));
+    const reply = [...msgItems].reverse().find(
+      (m) => (m.role === 'assistant' || m.role === 'ASSISTANT') && m.kind === 'TEXT',
+    );
+    if (reply?.text) { replyText = reply.text; break; }
+  }
+
+  if (!replyText) throw new Error('Agent timed out');
+
+  console.log('[extraction-agent] raw reply:', replyText);
+
+  // Parse JSON (strip markdown fences if present)
+  let clean = replyText.trim();
+  if (clean.startsWith('```')) {
+    const parts = clean.split('```');
+    clean = parts[1] ?? '';
+    if (clean.startsWith('json')) clean = clean.slice(4);
+    clean = clean.trim();
+  }
+
+  console.log('[extraction-agent] cleaned for parse:', clean);
+
+  let signals: Record<string, unknown>[] = [];
+  const attempts = [clean];
+  if (clean.startsWith('[') && !clean.trimEnd().endsWith(']')) attempts.push(clean + ']');
+  if (clean.startsWith('{')) attempts.push('[' + clean + ']');
+
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt);
+      signals = Array.isArray(parsed) ? parsed : [parsed];
+      break;
+    } catch (e) {
+      if (attempt === attempts[attempts.length - 1]) {
+        console.error('[extraction-agent] JSON parse failed:', e, '| input was:', clean);
+      }
+    }
+  }
+
+  console.log('[extraction-agent] signals parsed:', signals.length, signals);
+
+  const VALID_SEVERITIES = new Set(['P0', 'P1', 'P2', 'P3']);
+  for (const sig of signals) {
+    const rawSev = String(sig.severity ?? '');
+    const severity = VALID_SEVERITIES.has(rawSev) ? rawSev : 'P3';
+    await client.records.create(TABLE.SIGNALS, {
+      ticket_id: ticketId,
+      type: sig.type ?? 'bug',
+      severity,
+      feature_area: sig.feature_area ?? 'General',
+      quote: String(sig.quote ?? '').slice(0, 500),
+      summary: String(sig.summary ?? ''),
+    });
+  }
+
+  await client.records.update(TABLE.TICKETS, ticketId, {
+    status: 'done',
+    signal_count: signals.length,
+  });
 }
 
 export async function getTicket(id: string): Promise<Ticket> {
@@ -109,9 +195,118 @@ export async function listClusters(): Promise<Cluster[]> {
   });
 }
 
-export async function recluster(): Promise<void> {
+export async function recluster(): Promise<{ clusters: number; signals: number }> {
   const client = getClient();
-  await client.functions.run(FUNCTION.RECLUSTER_ALL);
+
+  // 1. Fetch all signals
+  const sigRes = await client.records.list(TABLE.SIGNALS, { limit: 1000 });
+  const signals = items<Signal>(sigRes);
+  if (!signals.length) return { clusters: 0, signals: 0 };
+
+  // 2. Prompt clustering agent
+  const signalPayload = signals.map((s) => ({
+    id: s.id,
+    type: s.type,
+    severity: s.severity,
+    feature_area: s.feature_area,
+    summary: s.summary,
+    quote: s.quote,
+  }));
+
+  const message =
+    'Group these product signals into 4-8 meaningful themes. Return a JSON array only — no prose.\n\n' +
+    'Each element must have:\n' +
+    '- theme: short name (3-6 words)\n' +
+    '- description: 1-2 sentences explaining the pattern\n' +
+    '- top_quote: most representative customer quote from this cluster\n' +
+    '- signal_ids: array of signal id strings assigned to this cluster\n\n' +
+    'Signals:\n' + JSON.stringify(signalPayload);
+
+  const conv = await client.agents.run(AGENT.CLUSTERING, message) as { id: string };
+
+  // 3. Poll for reply (max 120s)
+  const start = Date.now();
+  let lastSeq: number | undefined;
+  let replyText = '';
+
+  while (Date.now() - start < 120_000) {
+    await new Promise((r) => setTimeout(r, 3000));
+    const msgs = await client.conversations.messages.list(conv.id, {
+      limit: 20,
+      ...(lastSeq !== undefined ? { after_sequence: lastSeq } : {}),
+    }) as { items?: { role: string; kind: string; text?: string; sequence?: number }[] };
+    const msgItems = msgs.items ?? [];
+    if (msgItems.length) lastSeq = Math.max(...msgItems.map((m) => m.sequence ?? 0));
+    const reply = [...msgItems].reverse().find(
+      (m) => (m.role === 'assistant' || m.role === 'ASSISTANT') && m.kind === 'TEXT',
+    );
+    if (reply?.text) { replyText = reply.text; break; }
+  }
+
+  if (!replyText) throw new Error('Clustering agent timed out');
+
+  // 4. Parse clusters (same truncation-recovery as extraction)
+  let clean = replyText.trim();
+  if (clean.startsWith('```')) {
+    const parts = clean.split('```');
+    clean = parts[1] ?? '';
+    if (clean.startsWith('json')) clean = clean.slice(4);
+    clean = clean.trim();
+  }
+
+  type RawCluster = { theme: string; description: string; top_quote?: string; signal_ids: string[] };
+  let rawClusters: RawCluster[] = [];
+  const attempts = [clean];
+  if (clean.startsWith('[') && !clean.trimEnd().endsWith(']')) attempts.push(clean + ']');
+  for (const attempt of attempts) {
+    try {
+      const parsed = JSON.parse(attempt);
+      rawClusters = Array.isArray(parsed) ? parsed : [];
+      break;
+    } catch { /* try next */ }
+  }
+
+  if (!rawClusters.length) throw new Error('Could not parse clustering response');
+
+  // 5. Build signal lookup for severity counting
+  const signalMap = new Map(signals.map((s) => [s.id, s]));
+
+  // 6. Delete all existing clusters
+  const oldClustersRes = await client.records.list(TABLE.CLUSTERS, { limit: 500 });
+  const oldIds = items<Cluster>(oldClustersRes).map((c) => c.id).filter(Boolean) as string[];
+  if (oldIds.length) await client.records.bulk.delete(TABLE.CLUSTERS, oldIds);
+
+  // 7. Create new clusters + bulk-update signal cluster_ids
+  let assignedSignals = 0;
+  const signalUpdates: { id: string; cluster_id: string }[] = [];
+
+  for (const raw of rawClusters) {
+    const ids = (raw.signal_ids ?? []).filter((id) => signalMap.has(id));
+    const clusterSignals = ids.map((id) => signalMap.get(id)!);
+
+    const p0 = clusterSignals.filter((s) => s.severity === 'P0').length;
+    const p1 = clusterSignals.filter((s) => s.severity === 'P1').length;
+    const p2 = clusterSignals.filter((s) => s.severity === 'P2').length;
+    const p3 = clusterSignals.filter((s) => s.severity === 'P3').length;
+
+    const cluster = await client.records.create(TABLE.CLUSTERS, {
+      theme: raw.theme,
+      description: raw.description,
+      top_quote: raw.top_quote ?? '',
+      signal_count: ids.length,
+      p0_count: p0,
+      p1_count: p1,
+      p2_count: p2,
+      p3_count: p3,
+    });
+
+    ids.forEach((sid) => signalUpdates.push({ id: sid, cluster_id: cluster.id as string }));
+    assignedSignals += ids.length;
+  }
+
+  if (signalUpdates.length) await client.records.bulk.update(TABLE.SIGNALS, signalUpdates);
+
+  return { clusters: rawClusters.length, signals: assignedSignals };
 }
 
 // ─── Reports ─────────────────────────────────────────────────────────────────
@@ -125,9 +320,134 @@ export async function listReports(): Promise<Report[]> {
   return items<Report>(res);
 }
 
-export async function generateReport(): Promise<void> {
+export async function generateReport(): Promise<Report> {
   const client = getClient();
-  await client.functions.run(FUNCTION.GENERATE_DIGEST);
+
+  const [sigRes, clusterRes, ticketRes] = await Promise.all([
+    client.records.list(TABLE.SIGNALS, { limit: 2000 }),
+    client.records.list(TABLE.CLUSTERS, { limit: 500 }),
+    client.records.list(TABLE.TICKETS, {
+      filters: [{ field: 'status', op: 'eq', value: 'done' }],
+      limit: 500,
+    }),
+  ]);
+
+  const signals = items<Signal>(sigRes);
+  const clusters = items<Cluster>(clusterRes);
+  const ticketCount = items<Ticket>(ticketRes).length;
+
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+
+  const title = `Product Intelligence Digest — ${now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+  const byType = (t: SignalType) => signals.filter((s) => s.type === t);
+  const bySev = (sv: Severity) => signals.filter((s) => s.severity === sv);
+  const bugs = byType('bug'), features = byType('feature'), ux = byType('ux');
+  const churn = byType('churn'), positive = byType('positive');
+  const p0s = bySev('P0'), p1s = bySev('P1');
+
+  const areaMap = new Map<string, Signal[]>();
+  signals.forEach((s) => {
+    if (!areaMap.has(s.feature_area)) areaMap.set(s.feature_area, []);
+    areaMap.get(s.feature_area)!.push(s);
+  });
+  const topAreas = [...areaMap.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 8);
+
+  const sortedClusters = [...clusters].sort((a, b) => {
+    const w = (c: Cluster) => c.p0_count * 4 + c.p1_count * 3 + c.p2_count * 2 + c.p3_count;
+    return w(b) - w(a);
+  });
+
+  let md = `# ${title}\n\n`;
+
+  md += `## At a Glance\n\n`;
+  md += `| Metric | Count |\n|--------|-------|\n`;
+  md += `| Tickets processed | ${ticketCount} |\n`;
+  md += `| Total signals | ${signals.length} |\n`;
+  md += `| Bugs | ${bugs.length} |\n`;
+  md += `| Feature requests | ${features.length} |\n`;
+  md += `| UX issues | ${ux.length} |\n`;
+  md += `| Churn risks | ${churn.length} |\n`;
+  md += `| Positive | ${positive.length} |\n`;
+  md += `| Critical (P0) | ${p0s.length} |\n`;
+  md += `| Major (P1) | ${p1s.length} |\n`;
+  md += `| Themes identified | ${clusters.length} |\n\n`;
+
+  if (p0s.length > 0) {
+    md += `## Critical Issues (P0)\n\n`;
+    p0s.slice(0, 8).forEach((s) => {
+      md += `### ${s.feature_area} — ${s.summary}\n\n`;
+      if (s.quote) md += `> "${s.quote}"\n\n`;
+    });
+  }
+
+  if (p1s.length > 0) {
+    md += `## Major Issues (P1)\n\n`;
+    p1s.slice(0, 8).forEach((s) => {
+      md += `- **${s.feature_area}**: ${s.summary}\n`;
+    });
+    md += '\n';
+  }
+
+  if (sortedClusters.length > 0) {
+    md += `## Themes\n\n`;
+    sortedClusters.forEach((c, i) => {
+      const sevParts = [
+        c.p0_count > 0 && `${c.p0_count} P0`,
+        c.p1_count > 0 && `${c.p1_count} P1`,
+        c.p2_count > 0 && `${c.p2_count} P2`,
+        c.p3_count > 0 && `${c.p3_count} P3`,
+      ].filter(Boolean).join(', ');
+      md += `### ${i + 1}. ${c.theme} — ${c.signal_count} signals\n\n`;
+      md += `${c.description}\n\n`;
+      if (sevParts) md += `**Severity breakdown:** ${sevParts}\n\n`;
+      if (c.top_quote) md += `> "${c.top_quote}"\n\n`;
+    });
+  }
+
+  if (topAreas.length > 0) {
+    md += `## Feature Areas\n\n`;
+    md += `| Area | Signals | Bugs | Critical |\n|---|---|---|---|\n`;
+    topAreas.forEach(([area, sigs]) => {
+      const areaBugs = sigs.filter((s) => s.type === 'bug').length;
+      const crit = sigs.filter((s) => s.severity === 'P0' || s.severity === 'P1').length;
+      md += `| ${area} | ${sigs.length} | ${areaBugs} | ${crit} |\n`;
+    });
+    md += '\n';
+  }
+
+  if (churn.length > 0) {
+    md += `## Churn Risks\n\n`;
+    churn.slice(0, 5).forEach((s) => {
+      md += `- **${s.feature_area}**: ${s.summary}\n`;
+      if (s.quote) md += `  > "${s.quote.slice(0, 160)}${s.quote.length > 160 ? '…' : ''}"\n`;
+    });
+    md += '\n';
+  }
+
+  if (features.length > 0) {
+    md += `## Feature Requests\n\n`;
+    features.slice(0, 6).forEach((s) => {
+      md += `- **${s.feature_area}** (${s.severity}): ${s.summary}\n`;
+    });
+    md += '\n';
+  }
+
+  md += `---\n*Generated by Triage · ${now.toLocaleString()}*\n`;
+
+  const report = await client.records.create(TABLE.REPORTS, {
+    title,
+    content: md,
+    signal_count: signals.length,
+    cluster_count: clusters.length,
+    week_start: weekStart.toISOString(),
+  });
+
+  return report as unknown as Report;
 }
 
 export async function scheduleWeeklyDigest(): Promise<void> {
@@ -144,18 +464,33 @@ export async function scheduleWeeklyDigest(): Promise<void> {
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const client = getClient();
-  const [signalsRes, clustersRes] = await Promise.all([
+  const [signalsRes, clustersRes, ticketsRes] = await Promise.all([
     client.records.list(TABLE.SIGNALS, { limit: 2000 }),
     client.records.list(TABLE.CLUSTERS, { limit: 500 }),
+    client.records.list(TABLE.TICKETS, { limit: 1 }),
   ]);
   const signals = items<Signal>(signalsRes);
   const clusters = items<Cluster>(clustersRes);
+  const ticketTotal = (ticketsRes as { total?: number }).total ?? 0;
   return {
     total_signals: signals.length,
     total_clusters: clusters.length,
+    total_tickets: ticketTotal,
     bug_count: signals.filter((s) => s.type === 'bug').length,
     p0_count: signals.filter((s) => s.severity === 'P0').length,
   };
+}
+
+export async function waitForTicket(id: string, timeoutMs = 120_000): Promise<Ticket> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 2500));
+    const t = await getTicket(id);
+    if (t.status === 'done' || t.status === 'failed' || String(t.status).startsWith('failed')) {
+      return t;
+    }
+  }
+  throw new Error('Ticket processing timed out');
 }
 
 export async function getActivityFeed(limit = 10): Promise<{ event_type: string; description: string; created_at: string }[]> {
