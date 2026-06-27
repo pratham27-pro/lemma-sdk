@@ -97,11 +97,13 @@ export function Themes() {
 
   const reclusterMutation = useMutation({
     mutationFn: recluster,
-    onSuccess: () => {
-      toast.success('Re-clustering started — themes will update shortly');
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['clusters'] }), 10000);
+    onSuccess: ({ clusters, signals }) => {
+      toast.success(`Clustered ${signals} signals into ${clusters} themes`);
+      queryClient.invalidateQueries({ queryKey: ['clusters'] });
+      queryClient.invalidateQueries({ queryKey: ['signals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
-    onError: () => toast.error('Failed to start re-clustering'),
+    onError: (e) => toast.error('Clustering failed: ' + (e instanceof Error ? e.message : 'unknown error')),
   });
 
   const totalSignals = clusters.reduce((sum, c) => sum + c.signal_count, 0);
@@ -119,7 +121,7 @@ export function Themes() {
             loading={reclusterMutation.isPending}
             onClick={() => reclusterMutation.mutate()}
           >
-            Re-cluster
+            {reclusterMutation.isPending ? 'Clustering… (~60s)' : 'Re-cluster'}
           </Button>
         }
       />

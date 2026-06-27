@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { TableProperties, Download } from 'lucide-react';
+import { TableProperties, Download, Search } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
 import { Button } from '../components/ui/Button';
 import { TypeBadge, SeverityBadge } from '../components/ui/Badge';
@@ -36,6 +36,7 @@ export function AllSignals() {
   const [typeFilter, setTypeFilter] = useState<SignalType | 'all'>('all');
   const [severityFilter, setSeverityFilter] = useState<Severity | 'all'>('all');
   const [clusterFilter, setClusterFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
   const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
 
   const presetCluster = searchParams.get('cluster');
@@ -55,13 +56,23 @@ export function AllSignals() {
     queryFn: listClusters,
   });
 
+  const needle = search.trim().toLowerCase();
+  const visibleSignals = needle
+    ? signals.filter((s) =>
+        s.summary.toLowerCase().includes(needle) ||
+        s.quote.toLowerCase().includes(needle) ||
+        s.feature_area.toLowerCase().includes(needle) ||
+        (s.cluster_theme ?? '').toLowerCase().includes(needle),
+      )
+    : signals;
+
   const SELECT_CLS = 'text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-accent-400 cursor-pointer';
 
   return (
     <div className="flex flex-col flex-1 min-h-screen animate-fade-in">
       <TopBar
         title="All Signals"
-        subtitle={`${signals.length} signal${signals.length !== 1 ? 's' : ''}`}
+        subtitle={needle ? `${visibleSignals.length} of ${signals.length} signals` : `${signals.length} signal${signals.length !== 1 ? 's' : ''}`}
         actions={
           <Button
             variant="secondary"
@@ -79,6 +90,16 @@ export function AllSignals() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden">
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2 px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search signals…"
+                className="text-xs pl-7 pr-3 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:border-accent-400 w-44"
+              />
+            </div>
             <select className={SELECT_CLS} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SignalType | 'all')}>
               <option value="all">All Types</option>
               <option value="bug">Bug</option>
@@ -100,9 +121,9 @@ export function AllSignals() {
                 <option key={c.id} value={c.id}>{c.theme}</option>
               ))}
             </select>
-            {(typeFilter !== 'all' || severityFilter !== 'all' || clusterFilter !== 'all') && (
+            {(typeFilter !== 'all' || severityFilter !== 'all' || clusterFilter !== 'all' || search) && (
               <button
-                onClick={() => { setTypeFilter('all'); setSeverityFilter('all'); setClusterFilter('all'); }}
+                onClick={() => { setTypeFilter('all'); setSeverityFilter('all'); setClusterFilter('all'); setSearch(''); }}
                 className="text-xs text-accent-600 hover:text-accent-700 font-medium transition-colors"
               >
                 Clear filters
@@ -115,7 +136,7 @@ export function AllSignals() {
             <div className="px-5 py-3">
               {[...Array(8)].map((_, i) => <SkeletonRow key={i} />)}
             </div>
-          ) : signals.length === 0 ? (
+          ) : visibleSignals.length === 0 ? (
             <Empty
               icon={<TableProperties size={32} />}
               title="No signals match"
@@ -133,7 +154,7 @@ export function AllSignals() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {signals.map((signal) => (
+                {visibleSignals.map((signal) => (
                   <tr
                     key={signal.id}
                     onClick={() => setSelectedSignal(signal)}

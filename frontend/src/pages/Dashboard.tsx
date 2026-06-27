@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
-  Zap, AlertCircle, Layers, Bug, Clock, ArrowRight, Plus,
+  Zap, AlertCircle, Layers, Bug, Clock, ArrowRight, Plus, Inbox, X,
 } from 'lucide-react';
 import { TopBar } from '../components/layout/TopBar';
 import { StatCard } from '../components/ui/Card';
@@ -24,6 +25,7 @@ function timeAgo(iso: string) {
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const [p0Dismissed, setP0Dismissed] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['dashboard-stats'],
@@ -61,25 +63,48 @@ export function Dashboard() {
       />
 
       <div className="flex-1 p-6 space-y-6">
+        {/* P0 alert banner */}
+        {!p0Dismissed && !!stats?.p0_count && (
+          <div className="flex items-center justify-between gap-4 bg-red-50 border border-red-200 rounded-xl px-5 py-3.5 animate-slide-up">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={16} className="text-red-500 shrink-0" />
+              <p className="text-sm font-medium text-red-800">
+                {stats.p0_count} critical issue{stats.p0_count !== 1 ? 's' : ''} detected — requires immediate attention
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => navigate('/app/signals')}
+                className="text-xs font-semibold text-red-700 hover:text-red-800 underline underline-offset-2 transition-colors"
+              >
+                Review now
+              </button>
+              <button onClick={() => setP0Dismissed(true)} className="text-red-400 hover:text-red-600 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            label="Total Signals"
+            label="Tickets"
+            value={stats?.total_tickets ?? 0}
+            icon={<Inbox size={16} />}
+            loading={statsLoading}
+          />
+          <StatCard
+            label="Signals"
             value={stats?.total_signals ?? 0}
             icon={<Zap size={16} />}
             accent
             loading={statsLoading}
           />
           <StatCard
-            label="Clusters"
+            label="Themes"
             value={stats?.total_clusters ?? 0}
             icon={<Layers size={16} />}
-            loading={statsLoading}
-          />
-          <StatCard
-            label="Bugs Found"
-            value={stats?.bug_count ?? 0}
-            icon={<Bug size={16} />}
             loading={statsLoading}
           />
           <StatCard
@@ -104,26 +129,7 @@ export function Dashboard() {
               </button>
             </div>
 
-            <FilterTabs signals={signals} />
-
-            {signalsLoading ? (
-              <div className="px-5 py-2">
-                {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
-              </div>
-            ) : signals.length === 0 ? (
-              <Empty
-                icon={<Zap size={32} />}
-                title="No signals yet"
-                description="Add your first tickets to start extracting product intelligence."
-                action={
-                  <Button variant="primary" size="sm" onClick={() => navigate('/app/tickets/new')}>
-                    Add Tickets
-                  </Button>
-                }
-              />
-            ) : (
-              <SignalList signals={signals} />
-            )}
+            <SignalPanel signals={signals} loading={signalsLoading} navigate={navigate} />
           </div>
 
           {/* Activity feed */}
@@ -173,53 +179,76 @@ export function Dashboard() {
   );
 }
 
-function FilterTabs({ signals }: { signals: Signal[] }) {
-  return (
-    <div className="flex gap-1 px-5 py-3 border-b border-slate-50">
-      {(['all', 'bug', 'feature', 'ux', 'churn', 'positive'] as const).map((f) => {
-        const count = f === 'all' ? signals.length : signals.filter((s) => s.type === f).length;
-        return (
-          <button
-            key={f}
-            className="px-2.5 py-1 rounded-md text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors capitalize"
-          >
-            {f === 'all' ? 'All' : f} {count > 0 && <span className="ml-0.5 opacity-60">{count}</span>}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+type FilterType = 'all' | 'bug' | 'feature' | 'ux' | 'churn' | 'positive';
 
-function SignalList({ signals }: { signals: Signal[] }) {
-  const navigate = useNavigate();
+function SignalPanel({ signals, loading, navigate }: { signals: Signal[]; loading: boolean; navigate: ReturnType<typeof useNavigate> }) {
+  const [active, setActive] = useState<FilterType>('all');
+  const filtered = active === 'all' ? signals : signals.filter((s) => s.type === active);
+
   return (
-    <ul className="divide-y divide-slate-50">
-      {signals.map((signal) => (
-        <li
-          key={signal.id}
-          onClick={() => navigate(`/signals?highlight=${signal.id}`)}
-          className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer group"
-        >
-          <div className="flex gap-1.5 shrink-0 pt-0.5">
-            <SeverityBadge severity={signal.severity} />
-            <TypeBadge type={signal.type} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-slate-700 truncate leading-snug">{signal.quote}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[11px] text-slate-400">{signal.feature_area}</span>
-              {signal.cluster_theme && (
-                <>
-                  <span className="text-slate-200">·</span>
-                  <span className="text-[11px] text-accent-500">{signal.cluster_theme}</span>
-                </>
-              )}
-            </div>
-          </div>
-          <ArrowRight size={14} className="text-slate-300 group-hover:text-accent-400 transition-colors shrink-0 mt-0.5" />
-        </li>
-      ))}
-    </ul>
+    <>
+      <div className="flex gap-1 px-5 py-3 border-b border-slate-50 overflow-x-auto">
+        {(['all', 'bug', 'feature', 'ux', 'churn', 'positive'] as const).map((f) => {
+          const count = f === 'all' ? signals.length : signals.filter((s) => s.type === f).length;
+          return (
+            <button
+              key={f}
+              onClick={() => setActive(f)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap capitalize ${
+                active === f
+                  ? 'bg-accent-50 text-accent-700'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+              }`}
+            >
+              {f === 'all' ? 'All' : f}
+              {count > 0 && <span className="ml-1 opacity-60">{count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <div className="px-5 py-2">
+          {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
+        </div>
+      ) : signals.length === 0 ? (
+        <Empty
+          icon={<Zap size={32} />}
+          title="No signals yet"
+          description="Add your first tickets to start extracting product intelligence."
+          action={<Button variant="primary" size="sm" onClick={() => navigate('/app/tickets/new')}>Add Tickets</Button>}
+        />
+      ) : filtered.length === 0 ? (
+        <div className="px-5 py-8 text-center text-sm text-slate-400">No {active} signals found.</div>
+      ) : (
+        <ul className="divide-y divide-slate-50">
+          {filtered.map((signal) => (
+            <li
+              key={signal.id}
+              onClick={() => navigate('/app/signals')}
+              className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50 transition-colors cursor-pointer group"
+            >
+              <div className="flex gap-1.5 shrink-0 pt-0.5">
+                <SeverityBadge severity={signal.severity} />
+                <TypeBadge type={signal.type} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-700 truncate leading-snug">{signal.summary}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[11px] text-slate-400">{signal.feature_area}</span>
+                  {signal.cluster_theme && (
+                    <>
+                      <span className="text-slate-200">·</span>
+                      <span className="text-[11px] text-accent-500">{signal.cluster_theme}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <ArrowRight size={14} className="text-slate-300 group-hover:text-accent-400 transition-colors shrink-0 mt-0.5" />
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }

@@ -32,11 +32,12 @@ export function Reports() {
 
   const generateMutation = useMutation({
     mutationFn: generateReport,
-    onSuccess: () => {
-      toast.success('Report generation started — refresh in a moment');
-      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['reports'] }), 8000);
+    onSuccess: (report) => {
+      toast.success(`Report generated — ${report.signal_count} signals, ${report.cluster_count} themes`);
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      setSelectedReport(report);
     },
-    onError: () => toast.error('Failed to start report generation'),
+    onError: (e) => toast.error('Failed to generate report: ' + (e instanceof Error ? e.message : 'unknown error')),
   });
 
   async function handleSchedule() {
@@ -76,7 +77,7 @@ export function Reports() {
               loading={generateMutation.isPending}
               onClick={() => generateMutation.mutate()}
             >
-              Generate Report
+              {generateMutation.isPending ? 'Generating…' : 'Generate Report'}
             </Button>
           </div>
         }
