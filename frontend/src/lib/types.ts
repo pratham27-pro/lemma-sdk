@@ -1,7 +1,7 @@
 export type SignalType = 'bug' | 'feature' | 'ux' | 'churn' | 'positive';
 export type Severity = 'P0' | 'P1' | 'P2' | 'P3' | 'none';
 export type TicketSource = 'email' | 'slack' | 'form' | 'chat' | 'upload';
-export type TicketStatus = 'pending' | 'processing' | 'done' | 'failed';
+export type TicketStatus = 'pending' | 'processing' | 'done' | 'failed' | 'replied';
 
 export interface Ticket {
   id: string;
@@ -10,6 +10,7 @@ export interface Ticket {
   filename?: string;
   status: TicketStatus;
   signal_count: number;
+  reply_draft?: string;
   created_at: string;
 }
 

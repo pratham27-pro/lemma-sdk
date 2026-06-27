@@ -1,5 +1,5 @@
 import { ScheduleType } from 'lemma-sdk';
-import { getClient, TABLE, FUNCTION, WORKFLOW, AGENT } from './lemma';
+import { getClient, TABLE, WORKFLOW, AGENT } from './lemma';
 import type {
   Ticket, Signal, Cluster, Report, DashboardStats, TicketSource, SignalType, Severity,
 } from './types';
@@ -117,6 +117,14 @@ async function extractSignals(client: ReturnType<typeof getClient>, ticketId: st
     status: 'done',
     signal_count: signals.length,
   });
+
+  // Auto-generate reply draft in background — non-blocking
+  generateAndStoreDraft(client, ticketId).catch(() => {/* silent */});
+}
+
+async function generateAndStoreDraft(client: ReturnType<typeof getClient>, ticketId: string): Promise<void> {
+  const draft = await draftReply(ticketId);
+  await client.records.update(TABLE.TICKETS, ticketId, { reply_draft: draft });
 }
 
 export async function getTicket(id: string): Promise<Ticket> {
@@ -164,7 +172,7 @@ export async function listSignals(filters?: {
   if (clusterIds.length) {
     const clustersRes = await client.records.list(TABLE.CLUSTERS, { limit: 200 });
     const clusterMap = new Map(items<Cluster>(clustersRes).map((c) => [c.id, c.theme]));
-    signals.forEach((s) => { (s as Record<string, unknown>).cluster_theme = s.cluster_id ? clusterMap.get(s.cluster_id) ?? null : null; });
+    signals.forEach((s) => { (s as unknown as Record<string, unknown>).cluster_theme = s.cluster_id ? clusterMap.get(s.cluster_id) ?? null : null; });
   }
 
   return signals.sort((a, b) => severityScore(b.severity) - severityScore(a.severity));
@@ -510,17 +518,25 @@ export async function getActivityFeed(limit = 10): Promise<{ event_type: string;
   const signalItems = items<Signal>(signalsRes).map((s) => ({
     event_type: 'signal',
     description: s.summary ?? s.quote ?? '',
-    created_at: (s as Record<string, unknown>).created_at as string ?? '',
+    created_at: (s as unknown as Record<string, unknown>).created_at as string ?? '',
   }));
   const ticketItems = items<Ticket>(ticketsRes).map((t) => ({
     event_type: 'ticket',
     description: t.source ?? '',
-    created_at: (t as Record<string, unknown>).created_at as string ?? '',
+    created_at: (t as unknown as Record<string, unknown>).created_at as string ?? '',
   }));
 
   return [...signalItems, ...ticketItems]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
+}
+
+export async function sendReply(ticketId: string, finalText: string): Promise<void> {
+  const client = getClient();
+  await client.records.update(TABLE.TICKETS, ticketId, {
+    status: 'replied',
+    reply_draft: finalText,
+  });
 }
 
 // ─── Reply draft ──────────────────────────────────────────────────────────────

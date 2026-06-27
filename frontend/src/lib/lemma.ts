@@ -45,7 +45,7 @@ async function callRefresh(refreshTok: string): Promise<string | null> {
   }
 }
 
-function scheduleRefresh(accessToken: string, refreshTok: string) {
+function scheduleRefresh(accessToken: string, _refreshTok: string) {
   if (_refreshTimer) clearTimeout(_refreshTimer);
   const expiry = jwtExpiry(accessToken);
   const delay = Math.max(10_000, expiry - Date.now() - 5 * 60 * 1000); // 5 min before expiry
