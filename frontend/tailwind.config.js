@@ -4,27 +4,27 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       colors: {
         accent: {
-          DEFAULT: '#7C3AED',
-          50: '#F5F3FF',
-          100: '#EDE9FE',
-          200: '#DDD6FE',
-          400: '#A78BFA',
-          500: '#8B5CF6',
-          600: '#7C3AED',
-          700: '#6D28D9',
-          800: '#5B21B6',
+          DEFAULT: '#F5A020',
+          50:  '#2E2008',
+          100: '#3D2A0C',
+          200: '#5A3E14',
+          400: '#D08818',
+          500: '#E09418',
+          600: '#F5A020',
+          700: '#C8830A',
+          800: '#A06408',
         },
       },
       boxShadow: {
-        card: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-        'card-hover': '0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04)',
-        elevated: '0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.04)',
-        focus: '0 0 0 3px rgba(124,58,237,0.15)',
+        card: '0 1px 4px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
+        'card-hover': '0 6px 20px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3)',
+        elevated: '0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3)',
+        focus: '0 0 0 3px rgba(245,160,32,0.25)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

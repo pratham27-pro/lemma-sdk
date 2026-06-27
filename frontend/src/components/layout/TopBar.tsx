@@ -8,13 +8,25 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle, actions }: TopBarProps) {
   return (
-    <div className="flex items-center justify-between h-14 px-6 bg-white border-b border-slate-200 shrink-0 sticky top-0 z-10">
-      <div className="min-w-0">
-        <h1 className="text-base font-semibold text-slate-900 truncate leading-tight">{title}</h1>
-        {subtitle && <p className="text-xs text-slate-500 truncate">{subtitle}</p>}
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      height: 56, padding: '0 24px',
+      background: '#1C1916',
+      borderBottom: '1px solid rgba(255,255,255,0.07)',
+      flexShrink: 0, position: 'sticky', top: 0, zIndex: 10,
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <h1 style={{ fontSize: 15, fontWeight: 700, color: '#F0EAD8', letterSpacing: '-0.01em', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {title}
+        </h1>
+        {subtitle && (
+          <p style={{ fontSize: 11, color: '#6A6258', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions && (
-        <div className="flex items-center gap-2 ml-4 shrink-0">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 16, flexShrink: 0 }}>
           {actions}
         </div>
       )}

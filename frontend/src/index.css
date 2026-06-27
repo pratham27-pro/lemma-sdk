@@ -4,23 +4,21 @@
 
 @layer base {
   :root {
-    --bg: #FFFFFF;
-    --bg-subtle: #F8FAFC;
-    --bg-muted: #F1F5F9;
-    --surface: #FFFFFF;
-    --border: #E2E8F0;
-    --border-strong: #CBD5E1;
-    --text: #0F172A;
-    --text-secondary: #475569;
-    --text-muted: #94A3B8;
-    --accent: #7C3AED;
-    --accent-light: #EDE9FE;
-    --accent-mid: #6D28D9;
+    --bg: #1C1916;
+    --bg-subtle: #1B1916;
+    --bg-muted: #262220;
+    --surface: #262220;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #F0EAD8;
+    --text-secondary: #8A827A;
+    --text-muted: #5C5650;
+    --accent: #F5A020;
+    --accent-light: #2E2008;
+    --accent-mid: #C8830A;
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
 
   html {
     -webkit-font-smoothing: antialiased;
@@ -32,7 +30,7 @@
     margin: 0;
     background: var(--bg-subtle);
     color: var(--text);
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.5;
   }
@@ -43,10 +41,7 @@
     display: flex;
   }
 
-  ::selection {
-    background: #EDE9FE;
-    color: #4C1D95;
-  }
+  ::selection { background: #3D2A0C; color: #F5A020; }
 
   :focus-visible {
     outline: 2px solid var(--accent);
@@ -54,22 +49,110 @@
     border-radius: 4px;
   }
 
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
-    border-radius: 99px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
-  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #38332C; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #5C5650; }
 }
+
+/* ── App-shell dark theme overrides ─────────────────
+   Scoped to .app-shell so the landing page is unaffected.
+   Overrides Tailwind's slate/white utilities for dark bg.
+─────────────────────────────────────────────────── */
+
+/* Backgrounds */
+.app-shell .bg-white           { background-color: #262220; }
+.app-shell .bg-slate-50        { background-color: #1E1B18; }
+.app-shell .bg-slate-100       { background-color: #2E2A24; }
+.app-shell .bg-slate-200       { background-color: #38332C; }
+
+/* Text */
+.app-shell .text-slate-900     { color: #F0EAD8; }
+.app-shell .text-slate-800     { color: #DDD7C0; }
+.app-shell .text-slate-700     { color: #C8C0A8; }
+.app-shell .text-slate-600     { color: #A09890; }
+.app-shell .text-slate-500     { color: #8A827A; }
+.app-shell .text-slate-400     { color: #6A6258; }
+.app-shell .text-slate-300     { color: #4A4440; }
+.app-shell .text-slate-200     { color: #38332C; }
+
+/* Borders */
+.app-shell .border-slate-100   { border-color: rgba(255,255,255,0.06); }
+.app-shell .border-slate-200   { border-color: rgba(255,255,255,0.08); }
+.app-shell .border-slate-300   { border-color: rgba(255,255,255,0.14); }
+
+/* Dividers */
+.app-shell .divide-slate-50  > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,0.06); }
+.app-shell .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,0.08); }
+.app-shell .divide-y         > :not([hidden]) ~ :not([hidden]) { border-color: rgba(255,255,255,0.07); }
+
+/* Hover states */
+.app-shell .hover\:bg-slate-50:hover   { background-color: #2A2622; }
+.app-shell .hover\:bg-slate-100:hover  { background-color: #302C28; }
+.app-shell .hover\:bg-slate-200:hover  { background-color: #3C3730; }
+.app-shell .hover\:border-slate-300:hover { border-color: rgba(255,255,255,0.16); }
+.app-shell .hover\:text-slate-900:hover { color: #F0EAD8; }
+.app-shell .hover\:text-slate-800:hover { color: #DDD7C0; }
+.app-shell .hover\:text-slate-700:hover { color: #C8C0A8; }
+.app-shell .hover\:text-slate-600:hover { color: #A09890; }
+
+/* Group hover */
+.app-shell .group:hover .group-hover\:text-slate-600 { color: #A09890; }
+.app-shell .group:hover .group-hover\:text-slate-900 { color: #F0EAD8; }
+
+/* Semantic color adjustments for dark bg */
+/* Danger / P0 alert */
+.app-shell .bg-red-50        { background-color: rgba(220, 38, 38, 0.1); }
+.app-shell .border-red-200   { border-color: rgba(220, 38, 38, 0.25); }
+.app-shell .text-red-800     { color: #fca5a5; }
+.app-shell .text-red-700     { color: #f87171; }
+.app-shell .text-red-400     { color: #f87171; }
+.app-shell .hover\:text-red-800:hover { color: #fca5a5; }
+.app-shell .hover\:text-red-600:hover { color: #f87171; }
+.app-shell .underline         { text-underline-offset: 2px; }
+
+/* Type badges on dark bg */
+.app-shell .bg-blue-50        { background-color: rgba(37, 99, 235, 0.12); }
+.app-shell .bg-amber-50       { background-color: rgba(217, 119, 6, 0.12); }
+.app-shell .bg-pink-50        { background-color: rgba(219, 39, 119, 0.12); }
+.app-shell .bg-emerald-50     { background-color: rgba(5, 150, 105, 0.12); }
+.app-shell .text-blue-700     { color: #93c5fd; }
+.app-shell .text-amber-700    { color: #fcd34d; }
+.app-shell .text-pink-700     { color: #f9a8d4; }
+.app-shell .text-emerald-700  { color: #6ee7b7; }
+.app-shell .text-emerald-600  { color: #34d399; }
+.app-shell .text-emerald-400  { color: #34d399; }
+.app-shell .bg-emerald-400    { background-color: #34d399; }
+.app-shell .border-red-200    { border-color: rgba(220,38,38,0.2); }
+.app-shell .border-blue-200   { border-color: rgba(37,99,235,0.2); }
+.app-shell .border-amber-200  { border-color: rgba(217,119,6,0.2); }
+.app-shell .border-pink-200   { border-color: rgba(219,39,119,0.2); }
+.app-shell .border-emerald-200 { border-color: rgba(5,150,105,0.2); }
+
+/* Additional borders */
+.app-shell .border-slate-400   { border-color: rgba(255,255,255,0.2); }
+.app-shell .hover\:border-slate-400:hover { border-color: rgba(255,255,255,0.24); }
+.app-shell .hover\:text-slate-500:hover { color: #8A827A; }
+
+/* Placeholder text in forms */
+.app-shell .placeholder-slate-300::placeholder { color: #5C5650; }
+.app-shell .placeholder-slate-400::placeholder { color: #6A6258; }
+
+/* Textarea / input dark bg */
+.app-shell textarea, .app-shell input[type="text"], .app-shell input[type="email"] {
+  background-color: #1E1B18;
+  color: #F0EAD8;
+  border-color: rgba(255,255,255,0.08);
+}
+.app-shell textarea:focus, .app-shell input:focus {
+  background-color: #1E1B18;
+  border-color: #F5A020;
+  outline: none;
+}
+
+/* Scrollbar inside app */
+.app-shell ::-webkit-scrollbar-thumb { background: #38332C; }
+.app-shell ::-webkit-scrollbar-thumb:hover { background: #5C5650; }
 
 @layer utilities {
   .text-balance {
