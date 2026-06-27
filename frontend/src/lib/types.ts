@@ -55,6 +55,7 @@ export interface Report {
 export interface DashboardStats {
   total_signals: number;
   total_clusters: number;
+  total_tickets: number;
   bug_count: number;
   p0_count: number;
 }
