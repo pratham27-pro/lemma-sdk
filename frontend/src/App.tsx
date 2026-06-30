@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthGuard } from 'lemma-sdk/react';
+import { client } from './lib/lemma';
 import { Layout } from './components/layout/Layout';
 import { Landing } from './pages/Landing';
 import { Dashboard } from './pages/Dashboard';
@@ -27,8 +29,8 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/submit" element={<Submit />} />
 
-          {/* App — with sidebar layout */}
-          <Route path="/app" element={<Layout />}>
+          {/* App — with sidebar layout, requires Lemma login */}
+          <Route path="/app" element={<AuthGuard client={client}><Layout /></AuthGuard>}>
             <Route index element={<Dashboard />} />
             <Route path="tickets" element={<Tickets />} />
             <Route path="tickets/new" element={<Ingest />} />
